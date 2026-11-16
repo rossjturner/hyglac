@@ -162,7 +162,7 @@ Runs a three-dimensional weakly compressible SPH simulation of water in a rectan
 
 **Returns** `None`. Writes snapshots `<filename>_output/<filename>_<iteration>.hdf5` and the PySPH log `<filename>_output/<filename>.log`.
 
-**Notes.** The tank's outer walls are generated as `boundary` particles. The `set_obstacle` function selects the `obstacle` particles, and both types are treated as ice. If `set_obstacle` selects nothing, one obstacle particle is kept to avoid numerical problems. The fixed simulation settings are listed in [§7](#fixed-sph-settings).
+**Notes.** The tank's outer walls are generated as `boundary` particles. The `set_obstacle` function selects the `obstacle` particles, and both types are treated as ice. The fixed simulation settings are listed in [§7](#fixed-sph-settings).
 
 ### `fastload`
 
@@ -170,7 +170,13 @@ Runs a three-dimensional weakly compressible SPH simulation of water in a rectan
 fastload(path)
 ```
 
-Reads one snapshot. For an `.hdf5` file, it returns a dictionary with keys `arrays` and `solver_data`. `arrays` has an entry for each particle type (`fluid`, `boundary`, `obstacle`), each with NumPy attributes `x`, `y`, `z`, `h`, `rho` and `p` (`p` is `None` if absent). For other formats it calls PySPH's `load`.
+Loads particle data and simulation metadata from a PySPH output snapshot. The function provides access to the particle positions, smoothing lengths, densities and pressures for each particle type, together with information about the simulation state.
+
+| Parameter | Description |
+| --- | --- |
+| `path` | Path to the snapshot file. |
+
+**Returns** a dictionary with keys `arrays` and `solver_data` for HDF5 snapshots. `arrays` contains an entry for each particle type (`fluid`, `boundary`, `obstacle`), with NumPy attributes `x`, `y`, `z`, `h`, `rho` and `p` (`p` is `None` if absent). For other file formats, the function calls PySPH's `load`.
 
 ### `plot_seismic_sph`
 
