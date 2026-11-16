@@ -94,9 +94,9 @@ def set_obstacle(x, y, z, tol):
 ss.run_seismic_sph(
     3.0, 0.2, 1.0,          # tank length, width, height (m)
     1.5,                    # duration (s)
-    1 / 40, 5e-5,           # particle spacing (m), initial timestep (s)
+    0.025, 5e-5,           # particle spacing (m), initial timestep (s)
     set_fluid, set_obstacle,
-    output_times=np.arange(0, 1.5 + 0.0025, 0.005),   # 200 Hz outputs
+    output_times=np.arange(0, 1.5 + 1. / 400, 1. / 200),  # 200 Hz output
     filename="scurve_testcase",
 )
 ```
@@ -106,7 +106,7 @@ Snapshots are written to `scurve_testcase_output/`. Individual snapshots can be 
 ### Step 2: extract the interface forces
 
 ```python
-ss.seismic_sph_interactions(filename="scurve_testcase", delta=0.01,
+ss.seismic_sph_interactions(filename="scurve_testcase", delta=0.025,
                             dx=0.05, dy=0.05, dz=0.05, xrange=[2, 4])
 ```
 
@@ -137,7 +137,7 @@ for xs, ys in [(500, 0), (1000, 0), (0, 500), (0, 1000)]:
     seismogram_df.to_csv(f"seismograms/scurve_testcase_seismogram_{xs}_{ys}_0.csv")
 ```
 
-Each seismogram has three displacement components (`disp_1`-`disp_3`, m) and three velocity components (`vel_1`-`vel_3`, m s⁻¹). The notebook plots the velocities and their spectral density, computed with `scipy.signal.welch`.
+Each seismogram has three displacement components (`disp_1`-`disp_3`, m) and three velocity components (`vel_1`-`vel_3`, m s⁻¹). The notebook plots the velocity components and their power spectral densities, with the latter calculated using `scipy.signal.welch`.
 
 ## 5. API reference
 
