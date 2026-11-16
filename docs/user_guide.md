@@ -144,8 +144,7 @@ Each seismogram has three displacement components (`disp_1`-`disp_3`, m) and thr
 ### `run_seismic_sph`
 
 ```python
-run_seismic_sph(x, y, z, t, delta, dt, set_fluid, set_obstacle,
-                output_times=None, filename="seismic_sph")
+run_seismic_sph(x, y, z, t, delta, dt, set_fluid, set_obstacle, output_times=None, filename="seismic_sph")
 ```
 
 Runs a three-dimensional weakly compressible SPH simulation of water in a rectangular tank. The user specifies the initial distribution of water, which starts from rest and evolves under gravity, and the geometry of the fixed ice boundaries.
@@ -184,7 +183,18 @@ Loads particle data and simulation metadata from a PySPH output snapshot. The fu
 plot_seismic_sph(x, y, z, step, particle_type="fluid", filename=None)
 ```
 
-Plots plan (`x–y`) and side (`x–z`) views of one particle type (`"fluid"`, `"boundary"` or `"obstacle"`) at output iteration `step`. Fluid particles are coloured by density on a fixed 990–1010 kg m⁻³ scale. `x`, `y` and `z` are the tank dimensions, used for the axis limits. `filename` defaults to `"seismic_sph"`. The function changes Matplotlib's global settings (LaTeX text, serif font) for the rest of the session.
+Plots the particle distribution from a selected simulation output, showing plan (`x-y`) and side (`x-z`) views. Fluid particles are coloured by density on a fixed scale of 990-1010 kg m⁻³.
+
+| Parameter | Description |
+| --- | --- |
+| `x`, `y`, `z` | Tank length, width and height (m), used to set the plot limits. |
+| `step` | Output iteration number identifying the simulation snapshot. |
+| `particle_type` | Particle type to display: `"fluid"`, `"boundary"` or `"obstacle"`. Default `"fluid"`. |
+| `filename` | Simulation prefix. Default `"seismic_sph"`. |
+
+**Returns** `None`. Displays the particle distribution using Matplotlib.
+
+**Notes.** The function modifies Matplotlib's global settings to use LaTeX text rendering and serif fonts, requiring a working LaTeX installation.
 
 ### `seismic_sph_interactions`
 
