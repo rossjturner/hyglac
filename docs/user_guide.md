@@ -162,7 +162,7 @@ Runs a three-dimensional weakly compressible SPH simulation of water in a rectan
 
 **Returns** `None`. Writes snapshots `<filename>_output/<filename>_<iteration>.hdf5` and the PySPH log `<filename>_output/<filename>.log`.
 
-**Notes.** The tank's outer walls are generated as `boundary` particles. The `set_obstacle` function selects the `obstacle` particles, and both types are treated as ice. The fixed simulation settings are listed in [§7](#fixed-sph-settings).
+**Notes.** The tank's outer walls are generated as `boundary` particles. The `set_obstacle` function only needs to set the `obstacle` particles within the tank as both types are treated as ice. The fixed simulation settings are listed in [§7](#fixed-sph-settings).
 
 ### `fastload`
 
