@@ -2,7 +2,7 @@
 
 Hyglac is a computational framework for simulating water flow through ice channels and predicting the resulting seismic signals. The method is described in Turner et al. (2026), Hyglac: a computational framework to inform interpretation of hydrological processes in glacier environments through simulated seismic signals. This guide provides instructions for using the software, descriptions of its functions and parameters, and guidance on interpreting the results.
 
-The guide describes hyglac.py as provided in the accompanying software release. Unless otherwise specified, all physical quantities are expressed in SI units throughout this guide.
+The guide describes [`hyglac.py`](../hyglac.py) as provided in the accompanying software release. Unless otherwise specified, all physical quantities are expressed in SI units throughout this guide.
 
 **Contents**
 
@@ -18,7 +18,7 @@ The guide describes hyglac.py as provided in the accompanying software release. 
 
 ## 1. Overview
 
-Hyglac has three stages. Each stage can be used independently, provided the necessary inputs are available:
+Hyglac has three modular stages. Each stage can be used independently, provided the necessary inputs are available:
 
 | Stage | Function | Reads | Produces | Paper |
 | --- | --- | --- | --- | --- |
