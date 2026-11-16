@@ -123,7 +123,7 @@ The interface forces are summed onto a 10 cm source grid, with the horizontal or
 
 ### Step 4: compute seismograms
 
-The Earth model is 500 m of ice over bedrock, as in Table 3 of the paper. Seismometers are buried 0.5 m deep at four positions measured from the new origin:
+The Earth model consists of 500 m of ice overlying bedrock, as in Table 3 of the paper. Seismometers are positioned 0.5 m below the surface at four locations relative to the source-frame origin:
 
 ```python
 import os
@@ -132,16 +132,12 @@ model = ss.earth_model([(0, 3600, 1800, 916), (500, 6000, 3500, 2700)])
 
 os.makedirs("seismograms", exist_ok=True)
 for xs, ys in [(500, 0), (1000, 0), (0, 500), (0, 1000)]:
-    seismogram_df = ss.seismic_sph_signals(xs, ys, 0.5, earth_model=model,
-                                           forces_df=forces_df,
+    seismogram_df = ss.seismic_sph_signals(xs, ys, 0.5, earth_model=model, forces_df=forces_df,
                                            duration=5.001, sampling_rate=100.0)
     seismogram_df.to_csv(f"seismograms/scurve_testcase_seismogram_{xs}_{ys}_0.csv")
 ```
 
-Each seismogram has three displacement components (`disp_1`–`disp_3`, m) and three velocity components (`vel_1`–`vel_3`, m s⁻¹). The notebook plots the velocities and their spectral density, computed with `scipy.signal.welch`.
-
-> **Note:** the notebook calls `ss.seismic_signals`, an earlier name for `ss.seismic_sph_signals`. Use the current name when running it with this version of `hyglac.py`.
-
+Each seismogram has three displacement components (`disp_1`-`disp_3`, m) and three velocity components (`vel_1`-`vel_3`, m s⁻¹). The notebook plots the velocities and their spectral density, computed with `scipy.signal.welch`.
 
 ## 5. API reference
 
