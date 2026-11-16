@@ -203,25 +203,25 @@ seismic_sph_interactions(filename=None, delta=0.01, dx=0.05, dy=0.05, dz=0.05,
                          xrange=[4, 6], yrange=None, zrange=None, seed=0)
 ```
 
-Finds the water–ice interface and calculates the force on it at every output time (paper §3.1–3.2).
+Identifies the water–ice interface from the SPH simulation output and calculates the pressure forces acting on the interface at each output time (paper §3.1–3.2).
 
 | Parameter | Description |
 | --- | --- |
 | `filename` | Simulation prefix. Default (`None`): `"seismic_sph"`. |
-| `delta` | Grid spacing δl (m) onto which ice particles are mapped to detect the interface. Use the simulation's particle spacing; see [§7](#choosing-the-interface-parameters). Default `0.01`. |
-| `dx`, `dy`, `dz` | Size of the coarse grid cells Δl (m) used to sample the pressure and sum the forces. Default `0.05`; the paper uses `0.04`. |
-| `xrange`, `yrange`, `zrange` | `[min, max]` windows in the simulation frame (m), used to restrict the calculation to the region of interest; `None` means no restriction. **`xrange` defaults to `[4, 6]`**, so pass `xrange=None` to use the whole tank. |
-| `seed` | Seed for choosing one representative interface particle per cell. Default `0`. This sets NumPy's global random seed. |
+| `delta` | Grid spacing δl (m) onto which ice particles are mapped to detect the interface. This should match the simulation's particle spacing; see [§7](#choosing-the-interface-parameters). Default `0.01`. |
+| `dx`, `dy`, `dz` | Dimensions of the coarse grid cells Δl (m) used to sample the pressure and calculate the interface forces. Default `0.05`; the paper uses `0.04`. |
+| `xrange`, `yrange`, `zrange` | `[min, max]` windows in the simulation frame (m), used to restrict the calculation to the region of interest; `None` means no restriction. `xrange` defaults to `[4, 6]`, so `xrange=None` is required to include the whole tank. |
+| `seed` | Seed for selecting one representative interface particle per cell. Default `0`. This sets NumPy's global random seed. |
 
-**Returns** `None`. Writes, or **overwrites**, `<filename>_interactions.hdf5` in the working directory, containing these datasets:
+**Returns** `None`. Writes or overwrites `<filename>_interactions.hdf5` in the working directory, containing the following datasets:
 
 | Dataset | Contents |
 | --- | --- |
 | `t` | Output time (s). |
 | `x`, `y`, `z` | Coarse-cell coordinates in the simulation frame (m), as multiples of `dx`, `dy`, `dz`. |
-| `fx`, `fy`, `fz` | Force components (N), signed as described in [§4](#force-sign). |
+| `fx`, `fy`, `fz` | Force components (N), signed as described in [§3](#force-sign). |
 
-The file has one row per interface cell per output time, including cells with zero force, except for the first output time, which is skipped.
+The file contains one row per interface cell per output time, including cells with zero force. The first output time is excluded.
 
 ### `seismic_sph_forces`
 
