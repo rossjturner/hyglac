@@ -62,7 +62,7 @@ Three coordinate frames are used throughout Hyglac: the hydrodynamic simulation 
 
 ### Force sign
 
-The unit normal to the interface points out of the ice and into the water (paper §3.1). The interactions file and the force DataFrame store `+ pressure × area × normal`, which points into the water. The force the water exerts on the ice is the negative of this (paper Eq. 8). The `seismic_sph_signals` function applies that minus sign internally, so pass the forces in exactly as Hyglac produces them.
+The unit normal to the interface points out of the ice and into the water (paper §3.1). The interactions file and the force DataFrame store `pressure × area × normal`, which points into the water. The force the water exerts on the ice is the negative of this (paper Eq. 8). The `seismic_sph_signals` function applies that minus sign internally, so pass the forces in exactly as Hyglac produces them.
 
 ### Units
 
@@ -148,7 +148,7 @@ run_seismic_sph(x, y, z, t, delta, dt, set_fluid, set_obstacle,
                 output_times=None, filename="seismic_sph")
 ```
 
-Runs a three-dimensional weakly compressible SPH simulation of water in a rectangular tank with fixed ice boundaries. The water starts at rest.
+Runs a three-dimensional weakly compressible SPH simulation of water in a rectangular tank. The user specifies the initial distribution of water, which starts from rest and evolves under gravity, and the geometry of the fixed ice boundaries.
 
 | Parameter | Description |
 | --- | --- |
@@ -156,13 +156,13 @@ Runs a three-dimensional weakly compressible SPH simulation of water in a rectan
 | `t` | Simulation duration (s). |
 | `delta` | Initial particle spacing δl (m). The SPH smoothing length is `h = 1.3 δl`. |
 | `dt` | Initial timestep (s). The solver adapts the timestep as the simulation runs. |
-| `set_fluid`, `set_obstacle` | Functions `f(x, y, z, tol)` that receive coordinate arrays of candidate particles and return the **integer indices** of those to keep as initial water and as ice, respectively. `tol = δl/4`, for handling particles that sit exactly on a geometry edge. |
+| `set_fluid`, `set_obstacle` | Functions `f(x, y, z, tol)` that receive coordinate arrays of candidate particles and return the integer indices of particles to retain as initial water and ice, respectively. `tol = δl/4` is used to handle particles lying on geometry boundaries. |
 | `output_times` | List or array of times (s) at which snapshots are written. Default: the final time only. |
 | `filename` | Prefix for the output folder and files. Default `"seismic_sph"`. |
 
 **Returns** `None`. Writes snapshots `<filename>_output/<filename>_<iteration>.hdf5` and the PySPH log `<filename>_output/<filename>.log`.
 
-**Notes.** The tank's outer walls are generated as `boundary` particles. Your `set_obstacle` selection forms the `obstacle` particles, and both types are treated as ice. If `set_obstacle` selects nothing, one obstacle particle is kept to avoid numerical problems. The fixed simulation settings are listed in [§7](#fixed-sph-settings).
+**Notes.** The tank's outer walls are generated as `boundary` particles. The `set_obstacle` function selects the `obstacle` particles, and both types are treated as ice. If `set_obstacle` selects nothing, one obstacle particle is kept to avoid numerical problems. The fixed simulation settings are listed in [§7](#fixed-sph-settings).
 
 ### `fastload`
 
