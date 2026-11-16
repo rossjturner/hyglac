@@ -2,14 +2,14 @@
 
 Hyglac is a computational framework for simulating water flow through ice channels and predicting the resulting seismic signals. The method is described in Turner et al. (2026), Hyglac: a computational framework to inform interpretation of hydrological processes in glacier environments through simulated seismic signals. This guide provides instructions for using the software, descriptions of its functions and parameters, and guidance on interpreting the results.
 
-The guide describes [`hyglac.py`](../hyglac.py) as provided in the accompanying software release. Unless otherwise specified, all physical quantities are expressed in SI units throughout this guide.
+The guide describes [`hyglac.py`](../hyglac.py) as provided in the accompanying software release.
 
 **Contents**
 
 1. [Overview](#1-overview)
 2. [Installation](#2-installation)
-3. [Walkthrough: the verification test](#3-walkthrough-the-verification-test)
-4. [Conventions](#4-conventions)
+3. [Conventions](#3-conventions)
+4. [Walkthrough: the verification test](#4-walkthrough-the-verification-test)
 5. [API reference](#5-api-reference)
 6. [How the method is implemented](#6-how-the-method-is-implemented)
 7. [Choosing resolution and parameters](#7-choosing-resolution-and-parameters)
@@ -48,9 +48,29 @@ Some practical points:
 
 - PySPH and pyprop8 are both imported when the module loads, so both must be installed even if you only use one stage.
 
-## 3. Walkthrough: the verification test
+## 3. Conventions
 
-This section steps through [`verification_test/seismicsph_testcase.ipynb`](../verification_test/seismicsph_testcase.ipynb). The test is a small dam break: a 1 m long, 0.5 m high column of water collapses and strikes the far wall of a 3 m tank. Its resolution is deliberately coarse so that it runs quickly, and its results are not physically meaningful.
+### Coordinate frames
+
+Three coordinate frames are used throughout Hyglac: the hydrodynamic simulation frame, the seismic source frame, and the seismometer frame.
+
+**Simulation frame** (stages 1 and 2). `x` runs along the tank from `0` to its length. `y` **runs across the tank, centred on `0`, from `−width/2` to `+width/2`**. `z` points upward from the tank floor at `0`. The geometry **functions**, the `xrange`/`yrange`/`zrange` windows and the coordinates in the interactions file all use this frame.
+
+**Source frame** (output of `seismic_sph_forces`). The horizontal origin is moved to `(x0, y0)`, so `loc_1 = x − x0` and `loc_2 = y − y0`, rounded to the force grid. This corresponds to the paper's coordinate system, whose origin is the centre of the channel bends. The vertical coordinate `loc_3` is negative depth: `−loc_3` is the depth of the source below the surface of the Earth model. In practice `z0` is the depth of the simulation's floor: 500 m in the paper, at the base of the ice layer.
+
+**Seismometer position** (input to `seismic_sph_signals`). The seismometer's `x` and `y` are measured in the source frame, i.e. relative to `(x0, y0)`. Its `z` is a **positive depth**, consistent with `pyprop8'. The paper writes the same seismometer position as `z = −0.5 m`; in the code it is `z=0.5`.
+
+### Force sign
+
+The unit normal to the interface points out of the ice and into the water (paper §3.1). The interactions file and the force DataFrame store `+ pressure × area × normal`, which points into the water. The force the water exerts on the ice is the negative of this (paper Eq. 8). The `seismic_sph_signals` function applies that minus sign internally, so pass the forces in exactly as Hyglac produces them.
+
+### Units
+
+All inputs and outputs are expressed in SI units (m, s, N, Pa, kg m⁻³, m s⁻¹). The `earth_model` and `seismic_sph_signals` functions automatically convert to and from pyprop8's internal units (km, km s⁻¹, g cm⁻³).
+
+## 4. Walkthrough: the verification test
+
+This section steps through [`verification_test/seismicsph_testcase.ipynb`](../verification_test/seismicsph_testcase.ipynb). The test is a small dam break: a 1 m long, 0.5 m high column of water collapses and strikes the far wall of a 3 m tank. The resolution is deliberately coarse to minimise computational cost, and the results are not intended for quantitative scientific interpretation.
 
 ### Step 1: define the geometry and run the simulation
 
@@ -122,25 +142,6 @@ Each seismogram has three displacement components (`disp_1`–`disp_3`, m) and t
 
 > **Note:** the notebook calls `ss.seismic_signals`, an earlier name for `ss.seismic_sph_signals`. Use the current name when running it with this version of `hyglac.py`.
 
-## 4. Conventions
-
-### Coordinate frames
-
-Three coordinate frames are used, and most set-up mistakes come from mixing them up.
-
-**Simulation frame** (stages 1 and 2). `x` runs along the tank from `0` to its length. `y` is across the tank, centred on `0`, from `−width/2` to `+width/2`. `z` points upward from the tank floor at `0`. The geometry callbacks, the `xrange`/`yrange`/`zrange` windows and the coordinates in the interactions file all use this frame.
-
-**Source frame** (output of `seismic_sph_forces`). The horizontal origin is moved to `(x0, y0)`, so `loc_1 ≈ x − x0` and `loc_2 ≈ y − y0`, rounded to the force grid. This corresponds to the paper's coordinate system, whose origin is the centre of the channel bends. The vertical coordinate `loc_3` is negative depth: `−loc_3` is the depth of the source below the surface of the Earth model. In practice `z0` is the depth of the simulation's floor: 500 m in the paper, at the base of the ice layer.
-
-**Seismometer position** (input to `seismic_sph_signals`). The seismometer's `x` and `y` are measured in the source frame, i.e. relative to `(x0, y0)`. Its `z` is a **positive depth**. The paper writes the same seismometer position as `z = −0.5 m`; in the code it is `z=0.5`.
-
-### Force sign
-
-The unit normal to the interface points out of the ice and into the water (paper §3.1). The interactions file and the force DataFrame store `+ pressure × area × normal`, which points into the water. The force the water exerts on the ice is the negative of this (paper Eq. 8). `seismic_sph_signals` applies that minus sign internally, so pass the forces in exactly as Hyglac produces them.
-
-### Units
-
-Everything you pass in or get back is in SI units (m, s, N, Pa, kg m⁻³, m s⁻¹). `earth_model` and `seismic_sph_signals` convert to and from pyprop8's internal units (km, km s⁻¹, g cm⁻³).
 
 ## 5. API reference
 
