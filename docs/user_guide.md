@@ -247,16 +247,20 @@ Combines the calculated water–ice interface forces onto a coarser spatial grid
 ### `seismic_sph_forces_defaults`
 
 ```python
-seismic_sph_forces_defaults(x0, y0, z0, filename="seismic_sph")
+seismic_sph_forces_defaults(x0, y0, z0, filename=None)
 ```
 
-Calls `seismic_sph_forces` with the settings used for the channel geometries in Turner et al. (2026):
+Calculates seismic force vectors using the settings adopted for the channel geometries in Turner et al. (2026), including spatial restrictions and the exclusion of vertical forces.
 
-- **Source grid:** spacing `0.1` m, `average_height=True`, `crit_force=1e-3`.
-- **Region kept:** only sources with `−1 ≤ loc_1 ≤ 1` m (strictly ±1.001 m). This is the bend region, excluding the straight sections of channel either side.
-- **Vertical force:** `force_3` is set to zero, for the reasons given in [§6.3](#63-seismic-force-vectors-paper-33).
+| Parameter | Description |
+| --- | --- |
+| `x0`, `y0` | Simulation-frame position (m) that becomes the horizontal origin. |
+| `z0` | Depth (m) of the simulation floor below the Earth-model surface. |
+| `filename` | Simulation prefix. Default (`None`): `"seismic_sph"`. |
 
-**Returns** the resulting DataFrame. These restrictions suit the paper's geometries but not necessarily others.
+The function uses a source grid spacing of `0.1` m, with `average_height=True` and `crit_force=1e-3`. Only sources within `−1.001 ≤ loc_1 ≤ 1.001` m are retained, restricting the calculation to the channel bends, and the vertical force component (`force_3`) is set to zero (see [§6.3](#63-seismic-force-vectors-paper-33)).
+
+**Returns** a `pandas.DataFrame` containing the seismic force vectors, with the same columns as `seismic_sph_forces`. These settings are specific to the channel geometries considered in the paper and may not be appropriate for other geometries.
 
 ### `earth_model`
 
@@ -264,36 +268,34 @@ Calls `seismic_sph_forces` with the settings used for the channel geometries in 
 earth_model(layers)
 ```
 
-Builds a plane-layered Earth model. `layers` is a list of `(top_depth, vp, vs, density)` tuples in m, m s⁻¹, m s⁻¹ and kg m⁻³, starting with a layer whose top is at depth 0. **Returns** a `pyprop8.LayeredStructureModel`.
+Constructs a plane-layered Earth model for calculating seismic wave propagation.
 
-```python
-model = ss.earth_model([(0, 3600, 1800, 916),       # ice
-                        (500, 6000, 3500, 2700)])   # bedrock below 500 m
-```
+| Parameter | Description |
+| --- | --- |
+| `layers` | List of `(top_depth, vp, vs, density)` tuples defining the seismic properties of each layer. Depths are in metres, seismic velocities in m s⁻¹ and densities in kg m⁻³. The first layer must begin at a depth of 0 m. |
+
+**Returns** a `pyprop8.LayeredStructureModel`.
 
 ### `seismic_sph_signals`
 
 ```python
 seismic_sph_signals(x, y, z, earth_model=None, forces_df=None, filename=None,
-                    duration=10., sampling_rate=500., spec=False)
+                    duration=10., sampling_rate=500.)
 ```
 
-Computes synthetic three-component seismograms at one seismometer from a force history (paper §4).
+Calculates synthetic three-component seismograms at a specified seismometer location from a time series of seismic force vectors (paper §4).
 
 | Parameter | Description |
 | --- | --- |
-| `x`, `y` | Seismometer position in the source frame (m), i.e. relative to `(x0, y0)`. |
+| `x`, `y` | Seismometer position in the source frame (m), relative to `(x0, y0)`. |
 | `z` | Seismometer depth (m, positive downward). |
-| `earth_model` | From `earth_model`. Default: a uniform ice half-space (`vp = 3600` m s⁻¹, `vs = 1800` m s⁻¹, density 916 kg m⁻³). |
-| `forces_df` | Force-history DataFrame. If omitted, `<filename>.csv` is read instead, with the first column as the index. |
-| `filename` | Name of the force CSV without `.csv`, e.g. `"scurve_testcase_forces"`. |
-| `duration` | Length of the seismogram (s). Default `10`. Must be longer than the last force time. |
-| `sampling_rate` | Seismogram sample rate (Hz). Default `500`. Must not exceed the rate of the force history (see [§7](#choosing-the-seismic-parameters)). |
-| `spec` | Also return spectra. Default `False`. |
+| `earth_model` | Layered seismic velocity model generated using `earth_model`. Default: a uniform ice half-space (`vp = 3600` m s⁻¹, `vs = 1800` m s⁻¹, density 916 kg m⁻³). |
+| `forces_df` | DataFrame containing the seismic force vectors. If omitted, the data are read from a CSV file specified by `filename`. |
+| `filename` | Name of the force CSV file without the `.csv` extension. Used only when `forces_df` is not provided. |
+| `duration` | Seismogram duration (s). Default `10`. Must exceed the final force time. |
+| `sampling_rate` | Seismogram sampling frequency (Hz). Default `500`. Must not exceed the sampling frequency of the force vectors (see [§7](#choosing-the-seismic-parameters)). |
 
-**Returns** a DataFrame with columns `t` (s), `disp_1`, `disp_2`, `disp_3` (m) and `vel_1`, `vel_2`, `vel_3` (m s⁻¹). With `spec=True`, it returns a tuple `(seismogram_df, spectra_df)`. `spectra_df` has a frequency column `f` (401 log-spaced values from 0.1 to 1000 Hz) and complex columns `spec_1`, `spec_2`, `spec_3`.
-
-**Spectra caution.** `spec_*` sums each force's spectrum **without the delay for that force's arrival time**. It is therefore not the spectrum of the returned seismogram. To get the spectrum of the waveform, compute it from the velocity columns, as the notebook does with `scipy.signal.welch`.
+**Returns** a `pandas.DataFrame` with columns `t` (s), `disp_1`, `disp_2`, `disp_3` (m) and `vel_1`, `vel_2`, `vel_3` (m s⁻¹).
 
 ## 6. How the method is implemented
 
