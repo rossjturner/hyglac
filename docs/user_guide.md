@@ -11,10 +11,9 @@ The guide describes [`hyglac.py`](../hyglac.py) as provided in the accompanying 
 3. [Conventions](#3-conventions)
 4. [Walkthrough: the verification test](#4-walkthrough-the-verification-test)
 5. [API reference](#5-api-reference)
-6. [How the method is implemented](#6-how-the-method-is-implemented)
-7. [Choosing resolution and parameters](#7-choosing-resolution-and-parameters)
-8. [Using output from another SPH simulation](#8-using-output-from-another-sph-simulation)
-9. [Limitations](#9-limitations)
+6. [Choosing resolution and parameters](#6-choosing-resolution-and-parameters)
+7. [Using output from another SPH simulation](#7-using-output-from-another-sph-simulation)
+8. [Limitations](#8-limitations)
 
 ## 1. Overview
 
@@ -119,7 +118,7 @@ forces_df = ss.seismic_sph_forces_defaults(3.0, 0.0, 500.0, filename="scurve_tes
 forces_df.to_csv("scurve_testcase_forces.csv")
 ```
 
-The interface forces are summed onto a 10 cm source grid, with the horizontal origin shifted to the far wall at `(x, y) = (3, 0)` m. The sources are placed 500 m below the surface, at the base of the ice layer in the Earth model defined below, and the vertical force component is set to zero (see [§6.3](#63-seismic-force-vectors-paper-33)).
+The interface forces are summed onto a 10 cm source grid, with the horizontal origin shifted to the far wall at `(x, y) = (3, 0)` m. The sources are placed 500 m below the surface, at the base of the ice layer in the Earth model defined below, and the vertical force component is set to zero.
 
 ### Step 4: compute seismograms
 
@@ -258,7 +257,7 @@ Calculates seismic force vectors using the settings adopted for the channel geom
 | `z0` | Depth (m) of the simulation floor below the Earth-model surface. |
 | `filename` | Simulation prefix. Default (`None`): `"seismic_sph"`. |
 
-The function uses a source grid spacing of `0.1` m, with `average_height=True` and `crit_force=1e-3`. Only sources within `−1.001 ≤ loc_1 ≤ 1.001` m are retained, restricting the calculation to the channel bends, and the vertical force component (`force_3`) is set to zero (see [§6.3](#63-seismic-force-vectors-paper-33)).
+The function uses a source grid spacing of `0.1` m, with `average_height=True` and `crit_force=1e-3`. Only sources within `−1.001 ≤ loc_1 ≤ 1.001` m are retained, restricting the calculation to the channel bends, and the vertical force component (`force_3`) is set to zero.
 
 **Returns** a `pandas.DataFrame` containing the seismic force vectors, with the same columns as `seismic_sph_forces`. These settings are specific to the channel geometries considered in the paper and may not be appropriate for other geometries.
 
@@ -297,42 +296,7 @@ Calculates synthetic three-component seismograms at a specified seismometer loca
 
 **Returns** a `pandas.DataFrame` with columns `t` (s), `disp_1`, `disp_2`, `disp_3` (m) and `vel_1`, `vel_2`, `vel_3` (m s⁻¹).
 
-## 6. How the method is implemented
-
-This section describes what the code actually does at each step, with the parameter that controls each part.
-
-### 6.1 Hydrodynamic simulation (paper §2)
-
-`run_seismic_sph` builds a PySPH dam-break tank, keeps the water and ice particles your callbacks select, and runs PySPH's weakly compressible SPH scheme. The ice is rigid and never moves. Water is kept out of the ice by the pressure that builds up as water particles approach the fixed ice particles.
-
-### 6.2 Interface and pressure (paper §3.1–3.2)
-
-`seismic_sph_interactions` carries out the following steps:
-
-1. **Output times.** It reads the output times from the PySPH log, using only the most recent run recorded there. If there is no log, it reads the times from the snapshots. Snapshots that fall off the regular output interval are dropped.
-2. **Interface particles.** It takes the ice particles (`boundary` and `obstacle`) from the **first** snapshot and maps them onto a grid of spacing `delta`. An ice particle is on the interface if any of its 26 neighbouring grid points is empty. Particles on the outermost faces of the whole ice region are ignored, since they always have empty neighbours.
-3. **Normals and areas.** Each interface particle's unit normal is the sum of the directions to the empty grid points within ±2 cells, each weighted by 1/distance² (paper Eq. 5). The normal points into the water. The particle's effective area is `delta² × (|nx| + |ny| + |nz|)` (paper Eq. 6).
-4. **Coarse cells.** Interface particles are grouped into cells of size `dx × dy × dz`. Each cell's area is the sum of its particles' areas, and its normal is the sum of their normals, scaled down to unit length if it exceeds one. One particle per cell is chosen at random (using `seed`) as the cell's sampling point.
-5. **Smoothed pressure.** At each output time after the first, the cell's pressure is the plain average of the SPH pressure of every water particle within `7.5 h` of the sampling point. Here `h` is the SPH smoothing length, about 9.75 δl. This large averaging radius smooths out the pressure "ripples" that SPH produces next to rigid walls. If no water particle lies within `2 h` (the reach of the SPH kernel), the pressure is set to zero.
-6. **Force.** Each cell's force is pressure × cell area × cell normal.
-
-The `xrange`/`yrange`/`zrange` windows are widened by `7.5 h` so that cells near a window edge still see all their surrounding water. Snapshots are read ten at a time to limit memory use.
-
-### 6.3 Seismic force vectors (paper §3.3)
-
-`seismic_sph_forces` drops weak contributions and sums the remaining cell forces onto the source grid at each output time. It then converts the coordinates to the source frame. With `average_height=True`, all heights in a horizontal cell are summed into one source at depth `z0`.
-
-`seismic_sph_forces_defaults` also sets the vertical force to zero. As the water moves along the channel, its shifting centre of mass adds a slowly varying vertical force. Over the few metres travelled in the paper's cases, this effect is far too small to show up in the seismic signal. Modelling it properly would also require the water to settle into hydrostatic equilibrium first, which is expensive.
-
-### 6.4 Seismic wave propagation (paper §4)
-
-`seismic_sph_signals` calls pyprop8 to compute the seismogram from a unit point force in each of the three directions. The point force sits at the depth of the **first** source in the DataFrame, and each distinct horizontal source position becomes a separate seismometer offset. Each row of the force history then adds its force × the output interval × the matching unit seismogram, delayed to that row's time (paper Eqs. 11–12).
-
-The force times usually do not fall exactly on seismogram samples. To handle this, the unit seismograms are computed for `round(1 / (sampling_rate × dt))` start-time offsets, where `dt` is the force output interval. pyprop8 is therefore called 3 × that many times, which is the main cost of this stage.
-
-If the seismometer is deeper than the source, the code mirrors the problem, putting the seismometer the same distance above the source and flipping the horizontal positions and forces, to get around a pyprop8 restriction. This is not exact in a layered model with a free surface.
-
-## 7. Choosing resolution and parameters
+## 6. Choosing resolution and parameters
 
 ### Fixed SPH settings
 
@@ -373,7 +337,7 @@ The coarse cell size (`dx`, `dy`, `dz`) only needs to be fine enough to tell apa
 
 **Surface waves.** These are well established only beyond roughly 0.5–0.75 km from the source in the paper's model (paper §4.1).
 
-## 8. Using output from another SPH simulation
+## 7. Using output from another SPH simulation
 
 `seismic_sph_interactions` reads files directly, so another simulation's output must look like Hyglac's:
 
@@ -385,7 +349,7 @@ The coarse cell size (`dx`, `dy`, `dz`) only needs to be fine enough to tell apa
 
 Anything else requires adapting the file-reading functions in `hyglac.py`.
 
-## 9. Limitations
+## 8. Limitations
 
 **Physics**
 
@@ -398,7 +362,7 @@ Anything else requires adapting the file-reading functions in `hyglac.py`.
 
 - **Single source depth:** the seismic stage uses the first source's depth for every source. Use `average_height=True`, or adapt the code, if you need several depths.
 - **Spectra:** the `spec=True` output ignores force timing (see [§5](#seismic_sph_signals)).
-- **Deep seismometers:** results for a seismometer deeper than the source are approximate (see [§6.4](#64-seismic-wave-propagation-paper-4)).
+- **Deep seismometers:** results for a seismometer deeper than the source are approximate.
 - **Default `xrange`:** the default `[4, 6]` m in `seismic_sph_interactions` is easy to overlook and may miss the region of interest entirely.
 - **Global settings:** `seismic_sph_interactions` resets NumPy's global random seed, and `plot_seismic_sph` changes Matplotlib's global settings.
 - **Overwriting:** rerunning `seismic_sph_interactions` overwrites the interactions file. The force and seismogram functions never write files themselves.
