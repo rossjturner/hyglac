@@ -209,7 +209,7 @@ Identifies the water–ice interface from the SPH simulation output and calculat
 | --- | --- |
 | `filename` | Simulation prefix. Default (`None`): `"seismic_sph"`. |
 | `delta` | Grid spacing δl (m) onto which ice particles are mapped to detect the interface. This should match the simulation's particle spacing; see [§7](#choosing-the-interface-parameters). Default `0.01`. |
-| `dx`, `dy`, `dz` | Dimensions of the coarse grid cells Δl (m) used to sample the pressure and calculate the interface forces. Default `0.05`; the paper uses `0.04`. |
+| `dx`, `dy`, `dz` | Dimensions of the coarse grid cells Δl (m) used to sample the pressure and calculate the interface forces. Default `0.05`. |
 | `xrange`, `yrange`, `zrange` | `[min, max]` windows in the simulation frame (m), used to restrict the calculation to the region of interest; `None` means no restriction. `xrange` defaults to `[4, 6]`, so `xrange=None` is required to include the whole tank. |
 | `seed` | Seed for selecting one representative interface particle per cell. Default `0`. This sets NumPy's global random seed. |
 
@@ -221,27 +221,26 @@ Identifies the water–ice interface from the SPH simulation output and calculat
 | `x`, `y`, `z` | Coarse-cell coordinates in the simulation frame (m), as multiples of `dx`, `dy`, `dz`. |
 | `fx`, `fy`, `fz` | Force components (N), signed as described in [§3](#force-sign). |
 
-The file contains one row per interface cell per output time, including cells with zero force. The first output time is excluded.
+The file contains one row per interface cell per output time. The initial output at `t = 0` is excluded.
 
 ### `seismic_sph_forces`
 
 ```python
-seismic_sph_forces(x0, y0, z0, filename=None, dx=0.1, dy=0.1, dz=0.1,
-                   average_height=True, crit_force=1e-3)
+seismic_sph_forces(x0, y0, z0, filename=None, dx=0.1, dy=0.1, dz=0.1, average_height=True, crit_force=1e-3)
 ```
 
-Sums the interface forces into regions on a source grid, giving one force vector per region per output time, and converts the coordinates to the source frame (paper §3.3).
+Combines the calculated water–ice interface forces onto a coarser spatial grid to produce a time series of seismic force vectors. The source coordinates are transformed into the seismic source frame (paper §3.3).
 
 | Parameter | Description |
 | --- | --- |
 | `x0`, `y0` | Simulation-frame position (m) that becomes the horizontal origin. |
 | `z0` | Depth (m) of the simulation floor below the Earth-model surface. |
-| `filename` | Simulation prefix. **Required**: the default `None` raises a `TypeError`. |
-| `dx`, `dy`, `dz` | Source grid spacing (m). Default `0.1`. It can be finer than, equal to or coarser than the interactions grid. |
-| `average_height` | If `True` (default), sum over all heights in each horizontal cell and place every source at depth `z0` (`loc_3 = −z0`). If `False`, keep separate vertical cells, with `loc_3 ≈ z − z0`. |
-| `crit_force` | Drop contributions weaker than this fraction of the largest force. Default `1e-3`. It is applied both before and after gridding. |
+| `filename` | Simulation prefix. Default (`None`): `"seismic_sph"`. |
+| `dx`, `dy`, `dz` | Source grid spacing (m). Default `0.1`. The grid can be finer than, equal to or coarser than the interactions grid. |
+| `average_height` | If `True` (default), sum over all heights in each horizontal cell and place every source at depth `z0` (`loc_3 = −z0`). If `False`, retain separate vertical cells, with `loc_3 ≈ z − z0`. |
+| `crit_force` | Exclude contributions weaker than this fraction of the maximum force. Default `1e-3`. The threshold is applied both before and after gridding. |
 
-**Returns** a `pandas.DataFrame` with columns `t` (s), `loc_1`, `loc_2`, `loc_3` (m, source frame) and `force_1`, `force_2`, `force_3` (N). The DataFrame is not saved; use `to_csv` if you want to keep it.
+**Returns** a `pandas.DataFrame` with columns `t` (s), `loc_1`, `loc_2`, `loc_3` (m, source frame) and `force_1`, `force_2`, `force_3` (N). The DataFrame is not saved automatically but can be exported using `to_csv`.
 
 **Notes.** The output interval is taken as the median spacing of the output times, and contributions more than 10⁻⁹ s from a regular time are dropped.
 
