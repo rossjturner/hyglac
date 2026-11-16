@@ -70,11 +70,11 @@ All inputs and outputs are expressed in SI units (m, s, N, Pa, kg m⁻³, m s⁻
 
 ## 4. Walkthrough: the verification test
 
-This section steps through [`verification_test/seismicsph_testcase.ipynb`](../verification_test/seismicsph_testcase.ipynb). The test is a small dam break: a 1 m long, 0.5 m high column of water collapses and strikes the far wall of a 3 m tank. The resolution is deliberately coarse to minimise computational cost, and the results are not intended for quantitative scientific interpretation.
+This section steps through [`seismicsph_testcase.ipynb`](../verification_test/seismicsph_testcase.ipynb). The test is a small dam break: a 1 m long, 0.5 m high column of water collapses and strikes the far wall of a 3 m tank. The resolution is deliberately coarse to minimise computational cost, and the results are not intended for quantitative scientific interpretation.
 
-### Step 1: define the geometry and run the simulation
+### Step 1: Define the geometry and run the simulation
 
-The simulation domain is a box of the given length, width and height. Candidate fluid and ice particles fill the whole box. You supply two functions that return the indices of the particles to keep: one for the initial body of water, and one for the ice. Here the ice is the tank walls and floor, and the water starts in the first metre of the tank:
+The simulation domain is a box with specified length, width and height. Candidate fluid and ice particles are generated throughout the domain. Two functions select the particles to retain: one defining the initial water volume and the other defining the ice boundaries. In this example, the ice forms the tank walls and floor, while the water initially occupies the first metre of the tank:
 
 ```python
 import numpy as np
@@ -101,7 +101,7 @@ ss.run_seismic_sph(
 )
 ```
 
-Snapshots are written to `scurve_testcase_output/`. To look at one, use `ss.plot_seismic_sph(3.0, 0.2, 1.0, step=<iteration>, filename="scurve_testcase")`, choosing an iteration number that exists in that folder.
+Snapshots are written to `scurve_testcase_output/`. Individual snapshots can be visualised using `ss.plot_seismic_sph(3.0, 0.2, 1.0, step=<iteration>, filename="scurve_testcase")`, where `<iteration>` corresponds to an existing output iteration.
 
 ### Step 2: extract the interface forces
 
@@ -110,7 +110,7 @@ ss.seismic_sph_interactions(filename="scurve_testcase", delta=0.01,
                             dx=0.05, dy=0.05, dz=0.05, xrange=[2, 4])
 ```
 
-This finds the water–ice interface between `x = 2` and `x = 4` m, which contains the far wall at `x = 3` m. It then writes the force on each 5 cm cell of that interface at every output time to `scurve_testcase_interactions.hdf5`.
+This identifies the water–ice interface between `x = 2` and `x = 4` m, including the far wall at `x = 3` m. The force on each 5 cm cell of the interface is calculated at every output time and written to `scurve_testcase_interactions.hdf5`.
 
 ### Step 3: build the seismic force vectors
 
@@ -119,7 +119,7 @@ forces_df = ss.seismic_sph_forces_defaults(3.0, 0.0, 500.0, filename="scurve_tes
 forces_df.to_csv("scurve_testcase_forces.csv")
 ```
 
-This sums the forces onto a 10 cm source grid and moves the origin to the far wall, `(x, y) = (3, 0)` m. It places the source 500 m deep, at the base of the ice layer in the Earth model below, and drops the vertical force component (see [§6.3](#63-seismic-force-vectors-paper-33)).
+The interface forces are summed onto a 10 cm source grid, with the horizontal origin shifted to the far wall at `(x, y) = (3, 0)` m. The sources are placed 500 m below the surface, at the base of the ice layer in the Earth model defined below, and the vertical force component is set to zero (see [§6.3](#63-seismic-force-vectors-paper-33)).
 
 ### Step 4: compute seismograms
 
