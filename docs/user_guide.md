@@ -174,7 +174,7 @@ Loads particle data and simulation metadata from a PySPH output snapshot. The fu
 
 | Parameter | Description |
 | --- | --- |
-| `path` | Path to the snapshot file. |
+| `path` | Path to the PySPH output file containing the particle data and simulation metadata at a particular time. |
 
 **Returns** a dictionary with keys `arrays` and `solver_data` for HDF5 snapshots. `arrays` contains an entry for each particle type (`fluid`, `boundary`, `obstacle`), with NumPy attributes `x`, `y`, `z`, `h`, `rho` and `p` (`p` is `None` if absent). For other file formats, the function calls PySPH's `load`.
 
