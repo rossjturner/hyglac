@@ -58,7 +58,7 @@ Three coordinate frames are used throughout Hyglac: the hydrodynamic simulation 
 
 **Source frame** (output of `seismic_sph_forces`). The horizontal origin is moved to `(x0, y0)`, so `loc_1 = x − x0` and `loc_2 = y − y0`, rounded to the force grid. This corresponds to the paper's coordinate system, whose origin is the centre of the channel bends. The vertical coordinate `loc_3` is negative depth: `−loc_3` is the depth of the source below the surface of the Earth model. In practice `z0` is the depth of the simulation's floor: 500 m in the paper, at the base of the ice layer.
 
-**Seismometer position** (input to `seismic_sph_signals`). The seismometer's `x` and `y` are measured in the source frame, i.e. relative to `(x0, y0)`. In this case, its `z` is a positive depth consistent with `pyprop8'. The paper writes the same seismometer position as `z = −0.5 m`; in the code it is `z=0.5`.
+**Seismometer position** (input to `seismic_sph_signals`). The seismometer's `x` and `y` are measured in the source frame, i.e. relative to `(x0, y0)`. In this case, its `z` is a positive depth consistent with `pyprop8`. The paper writes the same seismometer position as `z = −0.5 m`; in the code it is `z=0.5`.
 
 ### Force sign
 
