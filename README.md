@@ -80,4 +80,4 @@ MIT Licence.
 
 ## Contact
 
-Ross Turner <turner.rj@icloud.com>
+Ross Turner <ross.turner@utas.edu.au>
