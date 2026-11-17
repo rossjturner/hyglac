@@ -150,7 +150,7 @@ Runs a three-dimensional weakly compressible SPH simulation of water in a rectan
 | `t` | Simulation duration (s). |
 | `delta` | Initial particle spacing δl (m). The SPH smoothing length is `h = 1.3 δl`. |
 | `dt` | Initial timestep (s). The solver adapts the timestep as the simulation runs. |
-| `set_fluid`, `set_obstacle` | Functions `f(x, y, z, tol)` that receive coordinate arrays of candidate particles and return the integer indices of particles to retain as initial water and ice, respectively. `tol = δl/4` is used to handle particles lying on geometry boundaries. |
+| `set_fluid`, `set_obstacle` | Functions `f(x, y, z, tol)` that receive coordinate arrays of candidate particles and return the integer indices of particles to retain as initial water and ice, respectively. The tolerance `tol = δl/4` is used to handle particles lying on geometry boundaries. |
 | `output_times` | List or array of times (s) at which snapshots are written. Default: the final time only. |
 | `filename` | Prefix for the output folder and files. Default `"seismic_sph"`. |
 
