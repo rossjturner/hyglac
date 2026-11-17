@@ -1,5 +1,30 @@
-# seismic_sph module
-# Ross Turner, 15 November 2026
+"""
+Hyglac: a computational framework to inform interpretation of hydrological
+processes in glacier environments through simulated seismic signals.
+
+Implements the modular framework of Turner et al. (2026) in three stages:
+
+1. Hydrodynamic simulation (paper section 2): smoothed particle hydrodynamics
+   simulation of water flowing through an ice channel using run_seismic_sph.
+
+2. Seismic force vectors (paper section 3): post-processing of the SPH output
+   to identify the water–ice interface, calculate the smoothed dynamic pressure,
+   and convert this into force vectors using seismic_sph_interactions and
+   seismic_sph_forces or seismic_sph_forces_defaults.
+
+3. Seismic wave propagation (paper section 4): synthetic three-component
+   seismograms in a layered ice and bedrock model using earth_model and
+   seismic_sph_signals.
+
+Each stage can be used independently with suitable input data, allowing
+different force grids, seismometer positions and Earth models to be explored
+without repeating the hydrodynamic simulation.
+
+See docs/user_guide.md for the full API reference, coordinate and sign
+conventions, and verification test.
+
+Ross Turner, 15 November 2026
+"""
 
 # import packages
 import os, h5py
