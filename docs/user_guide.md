@@ -290,7 +290,7 @@ Calculates synthetic three-component seismograms at a specified seismometer loca
 | `forces_df` | DataFrame containing the seismic force vectors. If omitted, the data are read from a CSV file specified by `filename`. |
 | `filename` | Name of the force CSV file without the `.csv` extension. Used only when `forces_df` is not provided. |
 | `duration` | Seismogram duration (s). Default `10`. Must exceed the final force time. |
-| `sampling_rate` | Seismogram sampling frequency (Hz). Default `500`. Must not exceed the sampling frequency of the force vectors (see [§6](#choosing-the-seismic-parameters)). |
+| `sampling_rate` | Seismogram sampling frequency (Hz). Default `500`. Must not exceed the sampling frequency of the force vectors. |
 
 **Returns** a `pandas.DataFrame` with columns `t` (s), `disp_1`, `disp_2`, `disp_3` (m) and `vel_1`, `vel_2`, `vel_3` (m s⁻¹).
 
@@ -298,54 +298,48 @@ Calculates synthetic three-component seismograms at a specified seismometer loca
 
 ### Fixed SPH settings
 
-These are module-level constants in `hyglac.py`. Edit them there if you need to change them.
+The following default SPH parameters are defined in `hyglac.py` and can be modified directly in the code as required.
 
 | Setting | Value |
 | --- | --- |
-| Kernel, integrator | Wendland quintic, EPEC, adaptive timestep (`n_damp = 50`) |
+| Kernel | Wendland quintic |
 | Smoothing length | `h = 1.3 δl` |
 | Water density ρ₀ | 1000 kg m⁻³ |
 | Equation-of-state exponent γ | 7 |
 | Artificial viscosity α, β | 0.25, 0 |
 | Sound speed c₀ | `10 √(2 × 9.81 × 0.55)` ≈ 32.8 m s⁻¹ |
 | Gravity | −9.81 m s⁻² (vertical) |
-| Ice (boundary) layers | 1 |
 
-The sound speed is deliberately much lower than in real water so that larger timesteps can be used (paper §2.1). The value is inherited from PySPH's 3D dam-break example, which has a 0.55 m water column. Weakly compressible SPH usually needs c₀ to be about ten times the fastest flow speed to keep density changes to around 1%. The paper's flows reach about 5.5 m s⁻¹, so check the density spread with `plot_seismic_sph`, which shows 990–1010 kg m⁻³, when modelling faster or deeper flows.
+The sound speed is intentionally much lower than in real water so that larger timesteps can be used (paper §2.1). Weakly compressible SPH usually requires the sound speed to be about ten times the maximum flow velocity to limit density variations to around 1%.
 
 ### Choosing the simulation resolution
 
-The paper uses a particle spacing of δl = 0.01 m. Runtime grows roughly as 1/δl³, because the number of particles does, so resolution is the main cost lever. The pressure-averaging radius (`7.5 h ≈ 9.75 δl`) should stay smaller than half the channel width. Narrow channels therefore need finer resolution (paper §6.2).
+The number of particles scales approximately as 1/δl³, while finer resolution also requires smaller timesteps, further increasing computational cost. The pressure-averaging radius (`7.5h ≈ 9.75δl`) should remain smaller than half the channel width. Narrower channels therefore require finer resolution (paper §6.2). The paper uses a particle spacing of δl = 0.01 m.
 
-Write snapshots often enough to capture an impact in a single sample. The paper uses 200 Hz, i.e. `output_times` spaced 0.005 s apart.
+The temporal resolution should be sufficient to capture the timescale of the simulated interactions. The paper uses a sampling frequency of 200 Hz, corresponding to an output interval of 0.005 s.
 
 ### Choosing the interface parameters
 
-`delta` should match the simulation's particle spacing. If `delta` is smaller than the spacing, neighbouring ice particles no longer land on adjacent grid points, so most ice particles look like interface particles and their normals become unreliable.
+The interface reconstruction requires `delta` to match the simulation's particle spacing. If `delta` is smaller than the spacing, neighbouring ice particles no longer occupy adjacent grid points, causing many ice particles to be incorrectly identified as interface particles and making their normals unreliable.
 
-The coarse cell size (`dx`, `dy`, `dz`) only needs to be fine enough to tell apart different sections of the interface; the paper uses 0.04 m for 0.2 m wide channels. Wider channels can use coarser cells, which run faster.
+The coarse cell dimensions (`dx`, `dy`, `dz`) should be small enough to distinguish different sections of the interface. The paper uses 0.04 m cells for channels 0.2 m wide. Larger cells reduce computational cost but also reduce the spatial resolution of the extracted forces.
 
-### Choosing the seismic parameters
-
-**Sample rate.** `sampling_rate` must not be higher than the force output rate (1/`dt`). Above about 2/`dt` the calculation fails outright. Ideally, choose a rate for which `1 / (sampling_rate × dt)` is a whole number, since the code rounds it.
-
-**Source grid.** The source grid can be much coarser than the interface grid: at 200 Hz, an S wave in ice travels about 9 m between samples.
-
-**Duration.** `duration` must be longer than the last force time plus the travel time to the seismometer.
-
-**Surface waves.** These are well established only beyond roughly 0.5–0.75 km from the source in the paper's model (paper §4.1).
 
 ## 7. Using output from another SPH simulation
 
-`seismic_sph_interactions` reads files directly, so another simulation's output must look like Hyglac's:
+Hyglac can calculate interface forces from other SPH simulations, provided their outputs follow the expected PySPH file structure. The required format is summarised below.
 
-- **Snapshots:** a folder `<name>_output/` holding snapshots `<name>_<iteration>.hdf5`. HDF5 is required.
-- **Particle groups:** in each snapshot, the groups `particles/fluid/arrays`, `particles/boundary/arrays` and `particles/obstacle/arrays`, each with datasets `x`, `y`, `z`, `h` and `rho`. The fluid group also needs `p`. The group names are fixed in the code, and the obstacle group must contain at least one particle.
-- **Output times:** ideally the PySPH log `<name>_output/<name>.log`, which is the tested route. Without it, the code looks for a `solver_data/t` dataset in each snapshot; this fallback is untested.
-- **Regular output times:** snapshots at irregular times are dropped.
-- **Fixed ice:** the ice must not move, since only the first snapshot's ice positions are used.
+| Requirement | Specification |
+| --- | --- |
+| Snapshot files | `<name>_output/<name>_<iteration>.hdf5` |
+| Particle groups | `particles/fluid/arrays`, `particles/boundary/arrays`, `particles/obstacle/arrays` |
+| Particle properties | `x`, `y`, `z`, `h`, `rho` for each group; additionally `p` for fluid particles |
+| Obstacle particles | At least one particle required |
+| Output times | `<name>_output/<name>.log`, or `solver_data/t` in each snapshot (untested) |
+| Temporal resolution | Regular output intervals; irregular snapshots are excluded |
+| Ice boundaries | Fixed throughout the simulation |
 
-Anything else requires adapting the file-reading functions in `hyglac.py`.
+Other output formats require modifications to the file-reading functions in `hyglac.py`.
 
 ## 8. Limitations
 
