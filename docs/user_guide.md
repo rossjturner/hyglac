@@ -11,9 +11,7 @@ The guide describes [`hyglac.py`](../hyglac.py) as provided in the accompanying 
 3. [Conventions](#3-conventions)
 4. [Walkthrough: the verification test](#4-walkthrough-the-verification-test)
 5. [API reference](#5-api-reference)
-6. [Choosing resolution and parameters](#6-choosing-resolution-and-parameters)
-7. [Using output from another SPH simulation](#7-using-output-from-another-sph-simulation)
-8. [Limitations](#8-limitations)
+6. [Modular use of Hyglac with alternative simulation methods](#6-modular-use-of-hyglac-with-alternative-simulation-methods)
 
 ## 1. Overview
 
@@ -158,7 +156,22 @@ Runs a three-dimensional weakly compressible SPH simulation of water in a rectan
 
 **Returns** `None`. Writes snapshots `<filename>_output/<filename>_<iteration>.hdf5` and the PySPH log `<filename>_output/<filename>.log`.
 
-**Notes.** The tank's outer walls are generated as `boundary` particles. The `set_obstacle` function only needs to set the `obstacle` particles within the tank as both types are treated as ice. The fixed simulation settings are listed in [§6](#fixed-sph-settings).
+**Notes.** The tank's outer walls are generated as `boundary` particles. The `set_obstacle` function only needs to set the `obstacle` particles within the tank as both types are treated as ice. 
+
+The default SPH parameters are defined in `hyglac.py` and can be modified directly in the code:
+
+| Setting | Value |
+| --- | --- |
+| Kernel | Wendland quintic |
+| Smoothing length | `h = 1.3 δl` |
+| Water density ρ₀ | 1000 kg m⁻³ |
+| Equation-of-state exponent γ | 7 |
+| Artificial viscosity α, β | 0.25, 0 |
+| Sound speed c₀ | `10 √(2 × 9.81 × 0.55)` ≈ 32.8 m s⁻¹ |
+| Gravity | −9.81 m s⁻² (vertical) |
+
+The sound speed is intentionally much lower than in real water so that larger timesteps can be used (paper §2.1). Weakly compressible SPH usually requires the sound speed to be about ten times the maximum flow velocity to limit density variations to around 1%.
+
 
 ### `fastload`
 
@@ -205,7 +218,7 @@ Identifies the water–ice interface from the SPH simulation output and calculat
 | Parameter | Description |
 | --- | --- |
 | `filename` | Simulation prefix. Default (`None`): `"seismic_sph"`. |
-| `delta` | Grid spacing δl (m) onto which ice particles are mapped to detect the interface. This should match the simulation's particle spacing; see [§6](#choosing-the-interface-parameters). Default `0.01`. |
+| `delta` | Grid spacing δl (m) onto which ice particles are mapped to detect the interface. This should match the simulation's particle spacing. Default `0.01`. |
 | `dx`, `dy`, `dz` | Dimensions of the coarse grid cells Δl (m) used to sample the pressure and calculate the interface forces. Default `0.05`. |
 | `xrange`, `yrange`, `zrange` | `[min, max]` windows in the simulation frame (m), used to restrict the calculation to the region of interest; `None` means no restriction. `xrange` defaults to `[4, 6]`, so `xrange=None` is required to include the whole tank. |
 | `seed` | Seed for selecting one representative interface particle per cell. Default `0`. This sets NumPy's global random seed. |
@@ -219,6 +232,8 @@ Identifies the water–ice interface from the SPH simulation output and calculat
 | `fx`, `fy`, `fz` | Force components (N), signed as described in [§3](#force-sign). |
 
 The file contains one row per interface cell per output time. The initial output at `t = 0` is excluded.
+
+**Choosing parameters.** The coarse cell dimensions (`dx`, `dy`, `dz`) should be small enough to distinguish different sections of the interface. The paper uses 0.04 m cells for channels 0.2 m wide. Larger cells reduce computational cost but also reduce the spatial resolution of the extracted forces.
 
 ### `seismic_sph_forces`
 
@@ -294,66 +309,31 @@ Calculates synthetic three-component seismograms at a specified seismometer loca
 
 **Returns** a `pandas.DataFrame` with columns `t` (s), `disp_1`, `disp_2`, `disp_3` (m) and `vel_1`, `vel_2`, `vel_3` (m s⁻¹).
 
-## 6. Choosing resolution and parameters
+## 6. Modular use of Hyglac with alternative simulation methods
 
-### Fixed SPH settings
+The three stages of Hyglac are modular, allowing the hydrodynamic and seismic wave propagation components to be replaced independently.
 
-The following default SPH parameters are defined in `hyglac.py` and can be modified directly in the code as required.
+### Alternative hydrodynamic simulations
 
-| Setting | Value |
-| --- | --- |
-| Kernel | Wendland quintic |
-| Smoothing length | `h = 1.3 δl` |
-| Water density ρ₀ | 1000 kg m⁻³ |
-| Equation-of-state exponent γ | 7 |
-| Artificial viscosity α, β | 0.25, 0 |
-| Sound speed c₀ | `10 √(2 × 9.81 × 0.55)` ≈ 32.8 m s⁻¹ |
-| Gravity | −9.81 m s⁻² (vertical) |
-
-The sound speed is intentionally much lower than in real water so that larger timesteps can be used (paper §2.1). Weakly compressible SPH usually requires the sound speed to be about ten times the maximum flow velocity to limit density variations to around 1%.
-
-### Choosing the simulation resolution
-
-The number of particles scales approximately as 1/δl³, while finer resolution also requires smaller timesteps, further increasing computational cost. The pressure-averaging radius (`7.5h ≈ 9.75δl`) should remain smaller than half the channel width. Narrower channels therefore require finer resolution (paper §6.2). The paper uses a particle spacing of δl = 0.01 m.
-
-The temporal resolution should be sufficient to capture the timescale of the simulated interactions. The paper uses a sampling frequency of 200 Hz, corresponding to an output interval of 0.005 s.
-
-### Choosing the interface parameters
-
-The interface reconstruction requires `delta` to match the simulation's particle spacing. If `delta` is smaller than the spacing, neighbouring ice particles no longer occupy adjacent grid points, causing many ice particles to be incorrectly identified as interface particles and making their normals unreliable.
-
-The coarse cell dimensions (`dx`, `dy`, `dz`) should be small enough to distinguish different sections of the interface. The paper uses 0.04 m cells for channels 0.2 m wide. Larger cells reduce computational cost but also reduce the spatial resolution of the extracted forces.
-
-
-## 7. Using output from another SPH simulation
-
-Hyglac can calculate interface forces from other SPH simulations, provided their outputs follow the expected PySPH file structure. The required format is summarised below.
+Hyglac can calculate interface forces from other SPH simulations, provided their outputs follow the expected file structure.
 
 | Requirement | Specification |
 | --- | --- |
 | Snapshot files | `<name>_output/<name>_<iteration>.hdf5` |
-| Particle groups | `particles/fluid/arrays`, `particles/boundary/arrays`, `particles/obstacle/arrays` |
-| Particle properties | `x`, `y`, `z`, `h`, `rho` for each group; additionally `p` for fluid particles |
-| Obstacle particles | At least one particle required |
-| Output times | `<name>_output/<name>.log`, or `solver_data/t` in each snapshot (untested) |
-| Temporal resolution | Regular output intervals; irregular snapshots are excluded |
-| Ice boundaries | Fixed throughout the simulation |
+| Particle groups | Water particles must be labelled `fluid`, and ice particles `boundary` and `obstacle`. |
+| Particle properties | `x`, `y`, `z`, `h`, `rho` for each group; additionally `p` for fluid particles. |
+| Output times | `<name>_output/<name>.log`, or `solver_data/t` in each snapshot. |
 
-Other output formats require modifications to the file-reading functions in `hyglac.py`.
+The simulation outputs must be recorded at regular time intervals, and the ice particles must remain stationary because their positions are extracted only from the initial snapshot. The current implementation also requires at least one obstacle particle. Other output formats require modifications to the file-reading functions in `hyglac.py`.
 
-## 8. Limitations
+### Alternative seismic wave propagation
 
-**Physics**
+The seismic force vectors generated by `seismic_sph_forces` can be used as inputs to other seismic wave propagation models instead of `seismic_sph_signals`. The output DataFrame contains the time (`t`), source coordinates (`loc_1`, `loc_2`, `loc_3`) and force components (`force_1`, `force_2`, `force_3`), all in SI units.
 
-- **Rigid ice:** the ice is fixed in place, so elastic response and resonance in the ice are not modelled.
-- **No acoustics:** the reduced sound speed rules out acoustic waves in the water and conduit resonance.
-- **Turbulence:** only turbulent structure larger than the SPH kernel is resolved.
-- **Finite water volume:** the dam-break set-up gives a fixed amount of water and a short event. In the paper, the long-lasting forcing in the two-90°-bend case was extended beyond the simulation by repeating and damping it; that step is not part of `hyglac.py`.
+These quantities can be exported to CSV or converted to the input format required by another propagation model. The coordinate conventions and force signs described in [Section 3](#3-conventions) must be preserved.
 
-**Implementation**
+---
 
-- **Single source depth:** the seismic stage uses the first source's depth for every source. Use `average_height=True`, or adapt the code, if you need several depths.
-- **Deep seismometers:** results for a seismometer deeper than the source are approximate.
-- **Default `xrange`:** the default `[4, 6]` m in `seismic_sph_interactions` is easy to overlook and may miss the region of interest entirely.
-- **Global settings:** `seismic_sph_interactions` resets NumPy's global random seed, and `plot_seismic_sph` changes Matplotlib's global settings.
-- **Overwriting:** rerunning `seismic_sph_interactions` overwrites the interactions file. The force and seismogram functions never write files themselves.
+**AI use statement**
+
+Generative AI (OpenAI ChatGPT) was used to assist with the editing and refinement of this user guide. The final content was reviewed by the author.
