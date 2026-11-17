@@ -43,9 +43,7 @@ Hyglac is a single module rather than an installable package. Run Python or Jupy
 import hyglac as ss
 ```
 
-Some practical points:
-
-- PySPH and pyprop8 are both imported when the module loads, so both must be installed even if you only use one stage.
+PySPH and pyprop8 are both imported when the module loads, so both must be installed even if you only use one of the three modular stages.
 
 ## 3. Conventions
 
@@ -109,7 +107,7 @@ ss.seismic_sph_interactions(filename="scurve_testcase", delta=0.025,
                             dx=0.05, dy=0.05, dz=0.05, xrange=[2, 4])
 ```
 
-This identifies the water–ice interface between `x = 2` and `x = 4` m, including the far wall at `x = 3` m. The force on each 5 cm cell of the interface is calculated at every output time and written to `scurve_testcase_interactions.hdf5`.
+This identifies the water–ice interface between `x = 2` and `x = 4` m, including the far wall at `x = 3` m. The force on each 5 cm cell of the interface is calculated at every output time after `t = 0` and written to `scurve_testcase_interactions.hdf5`.
 
 ### Step 3: build the seismic force vectors
 
@@ -160,7 +158,7 @@ Runs a three-dimensional weakly compressible SPH simulation of water in a rectan
 
 **Returns** `None`. Writes snapshots `<filename>_output/<filename>_<iteration>.hdf5` and the PySPH log `<filename>_output/<filename>.log`.
 
-**Notes.** The tank's outer walls are generated as `boundary` particles. The `set_obstacle` function only needs to set the `obstacle` particles within the tank as both types are treated as ice. The fixed simulation settings are listed in [§7](#fixed-sph-settings).
+**Notes.** The tank's outer walls are generated as `boundary` particles. The `set_obstacle` function only needs to set the `obstacle` particles within the tank as both types are treated as ice. The fixed simulation settings are listed in [§6](#fixed-sph-settings).
 
 ### `fastload`
 
@@ -207,7 +205,7 @@ Identifies the water–ice interface from the SPH simulation output and calculat
 | Parameter | Description |
 | --- | --- |
 | `filename` | Simulation prefix. Default (`None`): `"seismic_sph"`. |
-| `delta` | Grid spacing δl (m) onto which ice particles are mapped to detect the interface. This should match the simulation's particle spacing; see [§7](#choosing-the-interface-parameters). Default `0.01`. |
+| `delta` | Grid spacing δl (m) onto which ice particles are mapped to detect the interface. This should match the simulation's particle spacing; see [§6](#choosing-the-interface-parameters). Default `0.01`. |
 | `dx`, `dy`, `dz` | Dimensions of the coarse grid cells Δl (m) used to sample the pressure and calculate the interface forces. Default `0.05`. |
 | `xrange`, `yrange`, `zrange` | `[min, max]` windows in the simulation frame (m), used to restrict the calculation to the region of interest; `None` means no restriction. `xrange` defaults to `[4, 6]`, so `xrange=None` is required to include the whole tank. |
 | `seed` | Seed for selecting one representative interface particle per cell. Default `0`. This sets NumPy's global random seed. |
@@ -292,7 +290,7 @@ Calculates synthetic three-component seismograms at a specified seismometer loca
 | `forces_df` | DataFrame containing the seismic force vectors. If omitted, the data are read from a CSV file specified by `filename`. |
 | `filename` | Name of the force CSV file without the `.csv` extension. Used only when `forces_df` is not provided. |
 | `duration` | Seismogram duration (s). Default `10`. Must exceed the final force time. |
-| `sampling_rate` | Seismogram sampling frequency (Hz). Default `500`. Must not exceed the sampling frequency of the force vectors (see [§7](#choosing-the-seismic-parameters)). |
+| `sampling_rate` | Seismogram sampling frequency (Hz). Default `500`. Must not exceed the sampling frequency of the force vectors (see [§6](#choosing-the-seismic-parameters)). |
 
 **Returns** a `pandas.DataFrame` with columns `t` (s), `disp_1`, `disp_2`, `disp_3` (m) and `vel_1`, `vel_2`, `vel_3` (m s⁻¹).
 
@@ -361,7 +359,6 @@ Anything else requires adapting the file-reading functions in `hyglac.py`.
 **Implementation**
 
 - **Single source depth:** the seismic stage uses the first source's depth for every source. Use `average_height=True`, or adapt the code, if you need several depths.
-- **Spectra:** the `spec=True` output ignores force timing (see [§5](#seismic_sph_signals)).
 - **Deep seismometers:** results for a seismometer deeper than the source are approximate.
 - **Default `xrange`:** the default `[4, 6]` m in `seismic_sph_interactions` is easy to overlook and may miss the region of interest entirely.
 - **Global settings:** `seismic_sph_interactions` resets NumPy's global random seed, and `plot_seismic_sph` changes Matplotlib's global settings.
