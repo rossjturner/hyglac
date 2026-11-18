@@ -70,7 +70,7 @@ Worked examples for the four subglacial channel geometries (two 45° bends, two 
 Use of Hyglac should be accompanied by citations to the paper and software archive:
 
 - Turner, R. J., Magyar, J. C., Cook, S., and Reading, A. M. (2026). Hyglac: a computational framework to inform interpretation of hydrological processes in glacier environments through simulated seismic signals. In press.
-- Turner, R. J. (2026). hyglac. Zenodo. https://doi.org/10.5281/zenodo.24152043
+- Turner, R. J., Magyar, J. C., Cook, S., and Reading, A. M. (2026). Hyglac. Zenodo. https://doi.org/10.5281/zenodo.24152043
 
 The Zenodo archive holds the exact version used in the paper, together with the scripts for all four channel geometries.
 
